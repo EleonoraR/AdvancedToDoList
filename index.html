@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced To-Do List</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f5;
+            --text-color: #333;
+            --card-bg: #fff;
+            --shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        .dark-mode {
+            --bg-color: #333;
+            --text-color: #f5f5f5;
+            --card-bg: #444;
+            --shadow: 0 2px 5px rgba(255,255,255,0.1);
+        }
+
+        #app {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            padding-top: 30px;
+        }
+
+        #task-form {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+
+        input, select, button {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #task-list {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .task-item {
+            background-color: var(--card-bg);
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .task-item.dragging {
+            opacity: 0.5;
+        }
+
+        .task-info {
+            flex-grow: 1;
+        }
+
+        .task-actions button {
+            margin-left: 5px;
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+
+        .tag {
+            display: inline-block;
+            background-color: #e0e0e0;
+            color: #333;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-right: 5px;
+        }
+
+        #dark-mode-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #333;
+            color: #fff;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <h1>Advanced To-Do List</h1>
+        <form id="task-form">
+            <input type="text" id="task-input" placeholder="Enter task" required>
+            <input type="text" id="task-tags" placeholder="Tags (comma-separated)">
+            <select id="task-category">
+                <option value="">Select category</option>
+                <option value="work">Work</option>
+                <option value="personal">Personal</option>
+                <option value="shopping">Shopping</option>
+            </select>
+            <select id="task-priority">
+                <option value="low">Low Priority</option>
+                <option value="medium">Medium Priority</option>
+                <option value="high">High Priority</option>
+            </select>
+            <input type="date" id="task-due-date">
+            <button type="submit">Add Task</button>
+        </form>
+        <ul id="task-list"></ul>
+    </div>
+    <button id="dark-mode-toggle">Toggle Dark Mode</button>
+
+    <script>
+        const taskForm = document.getElementById('task-form');
+        const taskList = document.getElementById('task-list');
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+
+        function renderTasks() {
+            taskList.innerHTML = '';
+            tasks.forEach((task, index) => {
+                const li = document.createElement('li');
+                li.className = 'task-item';
+                li.draggable = true;
+                li.innerHTML = `
+                    <div class="task-info">
+                        <h3>${task.title}</h3>
+                        <p>Category: ${task.category}</p>
+                        <p>Priority: ${task.priority}</p>
+                        <p>Due Date: ${task.dueDate}</p>
+                        <p>${task.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}</p>
+                    </div>
+                    <div class="task-actions">
+                        <button onclick="deleteTask(${index})">Delete</button>
+                        <button onclick="editTask(${index})">Edit</button>
+                    </div>
+                `;
+                li.addEventListener('dragstart', dragStart);
+                li.addEventListener('dragover', dragOver);
+                li.addEventListener('drop', drop);
+                taskList.appendChild(li);
+            });
+            saveTasks();
+        }
+
+        function saveTasks() {
+            localStorage.setItem('tasks', JSON.stringify(tasks));
+        }
+
+        taskForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const title = document.getElementById('task-input').value;
+            const tags = document.getElementById('task-tags').value.split(',').map(tag => tag.trim());
+            const category = document.getElementById('task-category').value;
+            const priority = document.getElementById('task-priority').value;
+            const dueDate = document.getElementById('task-due-date').value;
+
+            tasks.push({ title, tags, category, priority, dueDate });
+            renderTasks();
+            taskForm.reset();
+        });
+
+        function deleteTask(index) {
+            tasks.splice(index, 1);
+            renderTasks();
+        }
+
+        function editTask(index) {
+            const task = tasks[index];
+            document.getElementById('task-input').value = task.title;
+            document.getElementById('task-tags').value = task.tags.join(', ');
+            document.getElementById('task-category').value = task.category;
+            document.getElementById('task-priority').value = task.priority;
+            document.getElementById('task-due-date').value = task.dueDate;
+            tasks.splice(index, 1);
+            renderTasks();
+        }
+
+        function dragStart(e) {
+            e.dataTransfer.setData('text/plain', e.target.innerHTML);
+            e.target.classList.add('dragging');
+        }
+
+        function dragOver(e) {
+            e.preventDefault();
+        }
+
+        function drop(e) {
+            e.preventDefault();
+            const draggedTaskHTML = e.dataTransfer.getData('text/plain');
+            const draggedIndex = Array.from(taskList.children).findIndex(child => child.innerHTML === draggedTaskHTML);
+            const dropIndex = Array.from(taskList.children).indexOf(e.target.closest('.task-item'));
+            
+            if (draggedIndex !== -1 && dropIndex !== -1) {
+                const [reorderedTask] = tasks.splice(draggedIndex, 1);
+                tasks.splice(dropIndex, 0, reorderedTask);
+                renderTasks();
+            }
+            
+            document.querySelector('.dragging').classList.remove('dragging');
+        }
+
+        darkModeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+        });
+
+        renderTasks();
+    </script>
+</body>
+</html>
